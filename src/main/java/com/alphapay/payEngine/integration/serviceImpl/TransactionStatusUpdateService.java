@@ -12,6 +12,7 @@ import com.alphapay.payEngine.integration.model.BackEndResponseCodeMapping;
 import com.alphapay.payEngine.integration.repository.BackEndResponseCodeMappingRepository;
 import com.alphapay.payEngine.integration.service.InitiatePaymentService;
 import com.alphapay.payEngine.integration.service.PaymentGatewayService;
+import com.alphapay.payEngine.financial.service.FinancialTransactionLedgerService;
 import com.alphapay.payEngine.integration.service.WorkflowService;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransaction;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransactionRepository;
@@ -49,6 +50,9 @@ public class TransactionStatusUpdateService {
 
     @Autowired
     private InitiatePaymentService initiatePaymentService;
+
+    @Autowired
+    private FinancialTransactionLedgerService financialTransactionLedgerService;
 
 //    @Scheduled(fixedRate = 14400000)
     public void updateInvoiceStatuses() {
@@ -160,7 +164,7 @@ public class TransactionStatusUpdateService {
                 transaction.setResponseMessage("Payment Cancelled.");
             }
 
-            financialTransactionRepository.save(transaction);
+            financialTransactionLedgerService.save(transaction);
             Optional<PaymentLinkEntity> paymentLinkEntity = paymentLinkEntityRepository.findByInvoiceId(transaction.getInvoiceLink());
             if (paymentLinkEntity.isPresent()) {
 
