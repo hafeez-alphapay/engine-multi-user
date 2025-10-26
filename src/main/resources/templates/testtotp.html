@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>TOTP Generator</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+</head>
+<body>
+
+<h1>TOTP Details</h1>
+
+<div th:if="${error}">
+    <p th:text="${error}"></p>
+</div>
+
+<div th:if="${secret}">
+    <h2>Secret:</h2>
+    <p th:text="${secret}"></p>
+</div>
+
+<div th:if="${qrCode}">
+    <h2>QR Code:</h2>
+    <img th:src="@{'data:image/png;base64,' + ${qrCode}}" />
+</div>
+
+
+
+<h2>Validate TOTP</h2>
+<label for="encryptedKey"> Key:</label>
+<input type="text" id="encryptedKey" name="encryptedKey">
+<br>
+<label for="totp">TOTP:</label>
+<input type="text" id="totp" name="totp">
+<br>
+<button id="validateButton">Validate</button>
+<div id="resultMessage"></div>
+
+<script>
+        // Assume you have an API endpoint at "/validate-totp" for validation
+        $('#validateButton').click(function() {
+            var encryptedKey = $('#encryptedKey').val();
+            var totp = $('#totp').val();
+
+            $.ajax({
+                url: '/optimustest/validate-totp',
+                type: 'POST',
+                data: JSON.stringify({ key: encryptedKey, totp: totp }),
+                contentType: 'application/json',
+                success: function(response) {
+                    if(response.valid) {
+                        $('#resultMessage').text('TOTP validation successful!').css('color', 'green');
+                    } else {
+                        $('#resultMessage').text('TOTP validation failed!').css('color', 'red');
+                    }
+                },
+                error: function() {
+                    $('#resultMessage').text('An error occurred during validation.').css('color', 'red');
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

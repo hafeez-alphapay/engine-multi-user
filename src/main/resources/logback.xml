@@ -1,0 +1,16 @@
+<configuration scan="true" scanPeriod="60 seconds">
+    <contextName>PayEngine</contextName>
+
+    <if condition='"${spring.profiles.active}".contains("local")'>
+        <then><include resource="logback/local_logback.xml"/></then>
+    </if>
+
+    <if condition='"${spring.profiles.active}".contains("dev")'>
+        <then><include resource="logback/dev_logback.xml"/></then>
+    </if>
+
+    <if condition='"${spring.profiles.active}".contains("prod")'>
+        <then><include resource="logback/prod_logback.xml"/></then>
+        <else><include resource="logback/local_logback.xml"/></else>
+    </if>
+</configuration>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Server port="-1" shutdown="SHUTDOWN">
+
+    <!-- Safe, supported listeners in Tomcat 10.1 -->
+    <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+    <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+    <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+    <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+    <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+
+    <!-- If you don't use JNDI resources, you can keep GlobalNamingResources empty -->
+    <GlobalNamingResources>
+        <!-- Intentionally empty (no UserDatabase Resource here) -->
+    </GlobalNamingResources>
+
+    <Service name="Catalina">
+        <!-- Hardened HTTP connector; no TRACE, no banner, larger header size -->
+        <Connector
+                port="8080"
+                protocol="org.apache.coyote.http11.Http11NioProtocol"
+                address="0.0.0.0"
+                connectionTimeout="20000"
+                maxHttpHeaderSize="16384"
+                enableLookups="false"
+                disableUploadTimeout="true"
+                allowTrace="false"
+                server=""
+                compression="on"
+                compressionMinSize="1024"
+                compressableMimeType="text/html,text/xml,text/plain,text/css,application/json,application/xml,text/javascript,application/javascript" />
+
+        <Engine name="Catalina" defaultHost="localhost">
+
+            <!-- No UserDatabase/CombinedRealm. Keep a minimal, valid Realm stack -->
+            <Realm className="org.apache.catalina.realm.LockOutRealm">
+                <Realm className="org.apache.catalina.realm.NullRealm"/>
+            </Realm>
+
+            <Host name="localhost"
+                  appBase="webapps"
+                  unpackWARs="false"
+                  autoDeploy="false">
+
+                <!-- Access log to files disabled to avoid write attempts on RO root.
+                     If you *must* log HTTP access, use a ConsoleAppender in the app and ship to CloudWatch. -->
+                <!--
+                <Valve className="org.apache.catalina.valves.AccessLogValve"
+                       directory="logs" prefix="localhost_access_log" suffix=".txt"
+                       pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+                -->
+
+            </Host>
+        </Engine>
+    </Service>
+</Server>

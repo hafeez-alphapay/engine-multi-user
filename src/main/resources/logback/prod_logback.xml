@@ -1,0 +1,92 @@
+<included>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${catalina.base}/logs/payEngine.log</file>
+        <encoder>
+            <pattern>%d{dd-MM HH:mm:ss.SSS} [%thread] %-5level %logger :: %msg %ex{short} %n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ERROR FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <file>${catalina.base}/logs/payEngine.err</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${catalina.base}/logs/payEngine.%d{yyyy-ww}.%i.err</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>60</maxHistory>
+            <totalSizeCap>20GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{dd-MM HH:mm:ss.SSS} [%thread] %-5level %logger :: %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.zaxxer" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="com.mchange" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="io.spring.platform" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="org.springframework" level="ERROR" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="org.hibernate" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="org.apache" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="org.springframework.web.filter.CommonsRequestLoggingFilter" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="com.zaxxer.hikari.HikariConfig" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+    </logger>
+
+    <logger name="com.alphapay.payEngine" level="TRACE" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="FILE" />
+        <appender-ref ref="ERROR FILE" />
+    </logger>
+
+    <root level="WARN">
+        <appender-ref ref="STDOUT" />
+        <!--        <appender-ref ref="ASYNC GELF" />-->
+        <appender-ref ref="ERROR FILE" />
+    </root>
+
+</included>
