@@ -24,6 +24,7 @@ import com.alphapay.payEngine.integration.repository.PaymentMethodRepository;
 import com.alphapay.payEngine.integration.service.ExecutePaymentService;
 import com.alphapay.payEngine.integration.service.MBMEIntegrationService;
 import com.alphapay.payEngine.integration.service.ServiceProviderSwitcher;
+import com.alphapay.payEngine.financial.service.FinancialTransactionLedgerService;
 import com.alphapay.payEngine.integration.service.WorkflowService;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransaction;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransactionRepository;
@@ -83,6 +84,8 @@ public class ExecutePaymentServiceImpl implements ExecutePaymentService {
 
     @Autowired
     private FinancialTransactionRepository financialRepository;
+    @Autowired
+    private FinancialTransactionLedgerService financialTransactionLedgerService;
 
     @Autowired
     private PaymentLinkEntityRepository paymentLinkEntityRepository;
@@ -381,7 +384,7 @@ public class ExecutePaymentServiceImpl implements ExecutePaymentService {
                 transaction.setPaymentResponse(response.getResponseData().toMap());
                 transaction.setRequestId(request.getRequestId());
                 transaction.setCustomerReference(response.getResponseData().getCustomerReference());
-                financialRepository.save(transaction);
+                financialTransactionLedgerService.save(transaction);
                 response.setPaymentURL(response.getResponseData().getPaymentURL());
 
                 cardInfoRequest.setPaymentURL(response.getResponseData().getPaymentURL());

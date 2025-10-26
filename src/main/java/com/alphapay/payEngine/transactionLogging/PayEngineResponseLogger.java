@@ -2,6 +2,7 @@ package com.alphapay.payEngine.transactionLogging;
 
 import com.alphapay.payEngine.account.management.model.AccountType;
 import com.alphapay.payEngine.common.bean.ErrorResponse;
+import com.alphapay.payEngine.financial.service.FinancialTransactionLedgerService;
 import com.alphapay.payEngine.integration.dto.paymentData.ApiResponse;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransaction;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransactionRepository;
@@ -33,6 +34,8 @@ public class PayEngineResponseLogger implements ResponseBodyAdvice<Object> {
     NonFinancialTransactionRepository nonFinancialRepo;
     @Autowired
     FinancialTransactionRepository financialRepo;
+    @Autowired
+    FinancialTransactionLedgerService financialTransactionLedgerService;
     @Autowired
     HttpServletRequest httpServletRequest;
 
@@ -85,7 +88,7 @@ public class PayEngineResponseLogger implements ResponseBodyAdvice<Object> {
                     }
                     if (body != null)
                         BeanUtility.copyProperties(body, transaction);
-                    financialRepo.save(transaction);
+                    financialTransactionLedgerService.save(transaction);
                     logger.debug("Financial Saving request to db {},status {}",transaction.getRequestId(), transaction.getStatus());
                 } else if (type.equals("NON-FINANCIAL")) {
                     NonFinancialTransaction transaction = nonFinancialRepo.findByRequestId((String) httpServletRequest.getAttribute("payEngineRequestId"));
