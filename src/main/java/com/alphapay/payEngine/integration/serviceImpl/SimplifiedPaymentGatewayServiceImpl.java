@@ -16,6 +16,7 @@ import com.alphapay.payEngine.integration.repository.ServiceProviderRepository;
 import com.alphapay.payEngine.integration.service.InitiatePaymentService;
 import com.alphapay.payEngine.integration.service.PaymentGatewayService;
 import com.alphapay.payEngine.integration.service.SimplifiedPaymentGatewayService;
+import com.alphapay.payEngine.financial.service.FinancialTransactionLedgerService;
 import com.alphapay.payEngine.integration.service.WorkflowService;
 import com.alphapay.payEngine.transactionLogging.DuplicateTransactionException;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransaction;
@@ -77,6 +78,8 @@ public class SimplifiedPaymentGatewayServiceImpl implements SimplifiedPaymentGat
     private MerchantAlphaPayServicesService merchantAlphaPayServicesService;
     @Autowired
     private FinancialTransactionRepository financialRepository;
+    @Autowired
+    private FinancialTransactionLedgerService financialTransactionLedgerService;
     @Autowired
     private ServiceProviderRepository serviceProviderRepository;
     @Value("${mbme.provider.service.id}")
@@ -474,7 +477,7 @@ public class SimplifiedPaymentGatewayServiceImpl implements SimplifiedPaymentGat
         FinancialTransaction transaction = buildFinancialTransaction(response, request);
 
         try {
-            financialRepo.save(transaction);
+            financialTransactionLedgerService.save(transaction);
             log.debug("Transaction persisted – internalId={}", transaction.getId());
         } catch (Exception ex) {
             if (ex instanceof ConstraintViolationException || ex.getCause() instanceof ConstraintViolationException) {

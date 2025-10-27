@@ -2,12 +2,14 @@ package com.alphapay.payEngine.transactionLogging.data;
 
 import com.alphapay.payEngine.alphaServices.model.PaymentLinkEntity;
 import com.alphapay.payEngine.common.bean.CommonBean;
+import com.alphapay.payEngine.financial.settlement.Settlement;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Map;
 
@@ -94,4 +96,15 @@ public class FinancialTransaction extends CommonBean {
     private String refundWebhookUrl;
 
     private String externalRefundId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "settlement_id")
+    @JsonIgnore
+    private Settlement settlement;
+
+    @Column(name = "settled_at")
+    private LocalDateTime settledAt;
+
+    @Column(name = "posted_to_wallet")
+    private Boolean postedToWallet = Boolean.FALSE;
 }

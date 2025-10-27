@@ -16,6 +16,7 @@ import com.alphapay.payEngine.common.bean.VerifyResult;
 import com.alphapay.payEngine.common.encryption.EncryptionService;
 import com.alphapay.payEngine.common.httpclient.service.RestClientService;
 import com.alphapay.payEngine.config.MyFatoorahConfig;
+import com.alphapay.payEngine.financial.service.FinancialTransactionLedgerService;
 import com.alphapay.payEngine.integration.dto.WebhookPushEvent;
 import com.alphapay.payEngine.integration.dto.paymentData.InitiatePaymentRequest;
 import com.alphapay.payEngine.integration.dto.paymentData.InitiatePaymentResponse;
@@ -108,6 +109,8 @@ public class InitiateInitiatePaymentServiceImpl implements InitiatePaymentServic
     private Boolean bypass3DS;
     @Autowired
     private FinancialTransactionRepository financialRepository;
+    @Autowired
+    private FinancialTransactionLedgerService financialTransactionLedgerService;
     @Autowired
     private MerchantServicesRepository merchantServicesRepository;
     @Autowired
@@ -625,7 +628,7 @@ public class InitiateInitiatePaymentServiceImpl implements InitiatePaymentServic
     public void safeSave(FinancialTransaction transLog) {
         // If it's a new entity, a single save is fine (no versioning yet)
         if (transLog.getId() == null) {
-            financialRepository.saveAndFlush(transLog);
+            financialTransactionLedgerService.saveAndFlush(transLog);
             return;
         }
 
@@ -633,7 +636,7 @@ public class InitiateInitiatePaymentServiceImpl implements InitiatePaymentServic
         while (true) {
             try {
                 // Try saving what we currently have (may be detached with stale version)
-                financialRepository.saveAndFlush(transLog);
+                financialTransactionLedgerService.saveAndFlush(transLog);
                 return;
             } catch (ObjectOptimisticLockingFailureException e) {
                 if (++attempts >= 3) throw e;
@@ -1027,7 +1030,7 @@ public class InitiateInitiatePaymentServiceImpl implements InitiatePaymentServic
         refundTransaction.setRequestId(refundId);
         refundTransaction.setTransactionType("MakeRefundRequest");
         //refundTransaction.setTransactionStatus(refundStatus.getTransactionStatus());
-        financialRepository.save(refundTransaction);
+            financialTransactionLedgerService.save(refundTransaction);
     }
 
     private void handleSelfTopUp(PaymentLinkEntity payLink, FinancialTransaction financialTransaction) {
