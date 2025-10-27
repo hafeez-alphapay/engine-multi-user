@@ -8,4 +8,5 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
 
     boolean existsByProcessorIdAndPeriodEnd(Long processorId, LocalDateTime periodEnd);
 
+
 }

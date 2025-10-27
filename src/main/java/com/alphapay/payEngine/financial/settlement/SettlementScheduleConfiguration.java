@@ -57,5 +57,6 @@ public class SettlementScheduleConfiguration extends CommonBean {
 
     @Column(name = "reserve_hold_days")
     private Integer reserveHoldDays;
+
 }
 
