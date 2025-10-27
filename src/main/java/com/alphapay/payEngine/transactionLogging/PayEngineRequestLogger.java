@@ -3,8 +3,8 @@ package com.alphapay.payEngine.transactionLogging;
 import com.alphapay.payEngine.integration.dto.paymentData.BaseFinancialRequest;
 import com.alphapay.payEngine.management.data.Application;
 import com.alphapay.payEngine.service.bean.BaseRequest;
+import com.alphapay.payEngine.financial.service.FinancialTransactionLedgerService;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransaction;
-import com.alphapay.payEngine.transactionLogging.data.FinancialTransactionRepository;
 import com.alphapay.payEngine.transactionLogging.data.NonFinancialTransaction;
 import com.alphapay.payEngine.transactionLogging.data.NonFinancialTransactionRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,7 +30,7 @@ public class PayEngineRequestLogger extends RequestBodyAdviceAdapter {
     NonFinancialTransactionRepository nonFinancialRepo;
 
     @Autowired
-    FinancialTransactionRepository financialRepo;
+    FinancialTransactionLedgerService financialTransactionLedgerService;
     @Autowired
     HttpServletRequest request;
 
@@ -81,7 +81,7 @@ public class PayEngineRequestLogger extends RequestBodyAdviceAdapter {
         }
         logger.debug("Saving incoming request to db {},tan", tran.getRequestId());
         try {
-            financialRepo.save(tran);
+            financialTransactionLedgerService.save(tran);
         } catch (Exception ex) {
             if (ex instanceof ConstraintViolationException || ex.getCause() instanceof ConstraintViolationException)
                 throw new DuplicateTransactionException();

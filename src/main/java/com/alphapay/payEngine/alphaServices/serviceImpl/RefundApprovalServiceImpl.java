@@ -9,6 +9,7 @@ import com.alphapay.payEngine.alphaServices.model.PendingRefundProcess;
 import com.alphapay.payEngine.alphaServices.repository.PendingRefundProcessRepository;
 import com.alphapay.payEngine.alphaServices.service.RefundApprovalService;
 import com.alphapay.payEngine.integration.dto.request.RefundRequest;
+import com.alphapay.payEngine.financial.service.FinancialTransactionLedgerService;
 import com.alphapay.payEngine.integration.service.InitiatePaymentService;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransaction;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransactionRepository;
@@ -34,6 +35,9 @@ public class RefundApprovalServiceImpl implements RefundApprovalService {
 
     @Autowired
     FinancialTransactionRepository financialTransactionRepository;
+
+    @Autowired
+    FinancialTransactionLedgerService financialTransactionLedgerService;
 
     @Autowired
     InitiatePaymentService initiatePaymentService;
@@ -118,7 +122,7 @@ public class RefundApprovalServiceImpl implements RefundApprovalService {
             try{
             ft.setRefundId(refundId);
             ft.setExternalRefundId(externalRefundId);
-            financialTransactionRepository.save(ft);}
+            financialTransactionLedgerService.save(ft);}
             catch (Exception e)
             {
                 log.error("Error updating FinancialTransaction for requestId: {}, error: {}", requestId, e.getMessage());

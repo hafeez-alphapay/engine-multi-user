@@ -74,4 +74,9 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
 
     List<FinancialTransaction> findAllByPaymentIdAndTransactionTypeInAndTransactionStatus(String paymentId,
                                                                                           List<String> transactionTypes,String transactionStatus);
+
+    List<FinancialTransaction> findByProcessorIdAndSettlementIsNullAndCreationTimeGreaterThanEqualAndCreationTimeLessThan(
+            Long processorId,
+            LocalDateTime periodStart,
+            LocalDateTime periodEnd);
 }
