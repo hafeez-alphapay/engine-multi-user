@@ -27,6 +27,11 @@ public class SettlementScheduleService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.List<SettlementScheduleConfiguration> findAll() {
+        return repository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public SettlementScheduleConfiguration getRequiredConfiguration(Long processorId) {
         return findByProcessorId(processorId)
                 .orElseThrow(() -> new IllegalStateException("Missing settlement schedule for processor " + processorId));

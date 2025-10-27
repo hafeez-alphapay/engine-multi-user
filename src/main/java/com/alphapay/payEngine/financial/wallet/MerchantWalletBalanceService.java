@@ -1,6 +1,7 @@
 package com.alphapay.payEngine.financial.wallet;
 
 import com.alphapay.payEngine.financial.exception.MerchantWalletStatusException;
+import com.alphapay.payEngine.financial.settlement.Settlement;
 import com.alphapay.payEngine.transactionLogging.data.FinancialTransaction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -37,13 +39,7 @@ public class MerchantWalletBalanceService {
             return false;
         }
 
-        MerchantWalletBalance wallet = walletRepository
-                .findByMerchantIdAndCurrency(merchantId, currency)
-                .orElseGet(() -> newWallet(merchantId, currency));
-
-        if (MerchantWalletStatus.CLOSED.equals(wallet.getStatus())) {
-            throw new MerchantWalletStatusException(merchantId, currency);
-        }
+        MerchantWalletBalance wallet = getOrCreateWallet(merchantId, currency);
 
         BigDecimal amount = resolveAmount(transaction);
         if (amount == null || BigDecimal.ZERO.compareTo(amount) == 0) {
@@ -64,6 +60,38 @@ public class MerchantWalletBalanceService {
 
         walletRepository.save(wallet);
         return true;
+    }
+
+    @Transactional
+    public void applySettlement(Settlement settlement) {
+        if (settlement == null) {
+            return;
+        }
+
+        Long merchantId = settlement.getMerchantId();
+        String currency = settlement.getCurrency();
+        if (merchantId == null || !StringUtils.hasText(currency)) {
+            log.warn("Skipping wallet settlement posting for {} due to missing merchant or currency", settlement.getId());
+            return;
+        }
+
+        MerchantWalletBalance wallet = getOrCreateWallet(merchantId, currency.toUpperCase(Locale.ROOT));
+
+        BigDecimal netPayout = safe(settlement.getNetPayout());
+        if (netPayout.signum() > 0) {
+            wallet.setTotalDebits(safe(wallet.getTotalDebits()).add(netPayout));
+        } else if (netPayout.signum() < 0) {
+            wallet.setTotalCredits(safe(wallet.getTotalCredits()).add(netPayout.abs()));
+        }
+
+        BigDecimal reserve = safe(wallet.getRollingReserveHeld()).add(safe(settlement.getRollingReserve()));
+        wallet.setRollingReserveHeld(reserve);
+
+        wallet.setCurrentBalance(safe(wallet.getTotalCredits())
+                .subtract(safe(wallet.getTotalDebits()))
+                .subtract(reserve));
+
+        walletRepository.save(wallet);
     }
 
     public boolean isEligibleForWalletPosting(FinancialTransaction transaction) {
@@ -102,6 +130,18 @@ public class MerchantWalletBalanceService {
         return wallet;
     }
 
+    private MerchantWalletBalance getOrCreateWallet(Long merchantId, String currency) {
+        String normalizedCurrency = currency != null ? currency.toUpperCase(Locale.ROOT) : null;
+        MerchantWalletBalance wallet = walletRepository
+                .findByMerchantIdAndCurrency(merchantId, normalizedCurrency)
+                .orElseGet(() -> newWallet(merchantId, normalizedCurrency));
+
+        if (MerchantWalletStatus.CLOSED.equals(wallet.getStatus())) {
+            throw new MerchantWalletStatusException(merchantId, normalizedCurrency);
+        }
+        return wallet;
+    }
+
     private boolean isCreditTransaction(FinancialTransaction transaction) {
         return PAYMENT_TRANSACTION_TYPE.equalsIgnoreCase(transaction.getTransactionType());
     }
@@ -120,7 +160,7 @@ public class MerchantWalletBalanceService {
         String currency = StringUtils.hasText(transaction.getPaidCurrency())
                 ? transaction.getPaidCurrency()
                 : transaction.getCurrency();
-        return StringUtils.hasText(currency) ? currency.toUpperCase() : null;
+        return StringUtils.hasText(currency) ? currency.toUpperCase(Locale.ROOT) : null;
     }
 
     private BigDecimal safe(BigDecimal value) {

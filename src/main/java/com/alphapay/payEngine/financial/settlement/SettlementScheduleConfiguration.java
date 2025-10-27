@@ -10,6 +10,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 
@@ -50,5 +51,12 @@ public class SettlementScheduleConfiguration extends CommonBean {
 
     @Column(name = "time_zone", nullable = false)
     private String timeZone = "UTC";
+
+    @Column(name = "reserve_percentage")
+    private BigDecimal reservePercentage;
+
+    @Column(name = "reserve_hold_days")
+    private Integer reserveHoldDays;
+
 }
 

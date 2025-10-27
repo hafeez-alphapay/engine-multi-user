@@ -24,6 +24,10 @@ public class Settlement extends CommonBean {
     @Column(name = "settlement_reference", nullable = false)
     private String settlementReference;
 
+    @Column(name = "processor_id", nullable = false)
+    private Long processorId;
+
+
     @Column(name = "merchant_id", nullable = false)
     private Long merchantId;
 
