@@ -25,6 +25,7 @@ public class MerchantWalletBalanceService {
     );
 
     private final MerchantWalletBalanceRepository walletRepository;
+    private final MerchantWalletLedgerRepository ledgerRepository;
 
     @Transactional
     public boolean applyTransaction(FinancialTransaction transaction) {
@@ -47,6 +48,9 @@ public class MerchantWalletBalanceService {
             return false;
         }
 
+        BigDecimal balanceBefore = safe(wallet.getCurrentBalance());
+        BigDecimal reserveBefore = safe(wallet.getRollingReserveHeld());
+
         if (isCreditTransaction(transaction)) {
             wallet.setTotalCredits(safe(wallet.getTotalCredits()).add(amount));
         } else {
@@ -58,7 +62,8 @@ public class MerchantWalletBalanceService {
                 .subtract(safe(wallet.getTotalDebits()))
                 .subtract(reserve));
 
-        walletRepository.save(wallet);
+        MerchantWalletBalance savedWallet = walletRepository.save(wallet);
+        recordTransactionLedgerEntry(savedWallet, transaction, amount, balanceBefore, reserveBefore);
         return true;
     }
 
@@ -77,6 +82,9 @@ public class MerchantWalletBalanceService {
 
         MerchantWalletBalance wallet = getOrCreateWallet(merchantId, currency.toUpperCase(Locale.ROOT));
 
+        BigDecimal balanceBefore = safe(wallet.getCurrentBalance());
+        BigDecimal reserveBefore = safe(wallet.getRollingReserveHeld());
+
         BigDecimal netPayout = safe(settlement.getNetPayout());
         if (netPayout.signum() > 0) {
             wallet.setTotalDebits(safe(wallet.getTotalDebits()).add(netPayout));
@@ -91,7 +99,8 @@ public class MerchantWalletBalanceService {
                 .subtract(safe(wallet.getTotalDebits()))
                 .subtract(reserve));
 
-        walletRepository.save(wallet);
+        MerchantWalletBalance savedWallet = walletRepository.save(wallet);
+        recordSettlementLedgerEntry(savedWallet, settlement, netPayout, balanceBefore, reserveBefore);
     }
 
     public boolean isEligibleForWalletPosting(FinancialTransaction transaction) {
@@ -116,6 +125,121 @@ public class MerchantWalletBalanceService {
         }
 
         return false;
+    }
+
+    private void recordTransactionLedgerEntry(MerchantWalletBalance wallet,
+                                              FinancialTransaction transaction,
+                                              BigDecimal amount,
+                                              BigDecimal balanceBefore,
+                                              BigDecimal reserveBefore) {
+        MerchantWalletLedgerEntry entry = new MerchantWalletLedgerEntry();
+        entry.setEntryType(resolveEntryType(transaction));
+        entry.setDirection(isCreditTransaction(transaction)
+                ? MerchantWalletLedgerDirection.CREDIT
+                : MerchantWalletLedgerDirection.DEBIT);
+        entry.setAmount(amount.abs());
+        entry.setReferenceType("FinancialTransaction");
+        entry.setReferenceId(resolveTransactionReferenceId(transaction));
+        entry.setStatementDescription(buildTransactionStatement(transaction));
+
+        recordLedgerEntry(wallet, entry, balanceBefore, reserveBefore);
+    }
+
+    private void recordSettlementLedgerEntry(MerchantWalletBalance wallet,
+                                             Settlement settlement,
+                                             BigDecimal netPayout,
+                                             BigDecimal balanceBefore,
+                                             BigDecimal reserveBefore) {
+        MerchantWalletLedgerEntry entry = new MerchantWalletLedgerEntry();
+        entry.setEntryType(MerchantWalletLedgerEntryType.SETTLEMENT);
+        entry.setReferenceType("Settlement");
+        entry.setReferenceId(resolveSettlementReferenceId(settlement));
+
+        BigDecimal balanceAfter = safe(wallet.getCurrentBalance());
+        BigDecimal balanceDelta = balanceAfter.subtract(balanceBefore);
+        entry.setAmount(balanceDelta.abs());
+        entry.setDirection(balanceDelta.compareTo(BigDecimal.ZERO) >= 0
+                ? MerchantWalletLedgerDirection.CREDIT
+                : MerchantWalletLedgerDirection.DEBIT);
+
+        boolean hasReserveChange = safe(settlement.getRollingReserve()).compareTo(BigDecimal.ZERO) != 0;
+        if (netPayout.signum() == 0 && hasReserveChange) {
+            entry.setEntryType(MerchantWalletLedgerEntryType.RESERVE_ADJUSTMENT);
+        }
+
+        entry.setStatementDescription(buildSettlementStatement(settlement, hasReserveChange && netPayout.signum() != 0));
+
+        recordLedgerEntry(wallet, entry, balanceBefore, reserveBefore);
+    }
+
+    private void recordLedgerEntry(MerchantWalletBalance wallet,
+                                   MerchantWalletLedgerEntry entry,
+                                   BigDecimal balanceBefore,
+                                   BigDecimal reserveBefore) {
+        entry.setWalletId(wallet.getId());
+        entry.setMerchantId(wallet.getMerchantId());
+        entry.setCurrency(wallet.getCurrency());
+        entry.setBalanceBefore(balanceBefore);
+        entry.setBalanceAfter(safe(wallet.getCurrentBalance()));
+        entry.setReserveBefore(reserveBefore);
+        entry.setReserveAfter(safe(wallet.getRollingReserveHeld()));
+        ledgerRepository.save(entry);
+    }
+
+    private MerchantWalletLedgerEntryType resolveEntryType(FinancialTransaction transaction) {
+        if (transaction == null || !StringUtils.hasText(transaction.getTransactionType())) {
+            return MerchantWalletLedgerEntryType.ADJUSTMENT;
+        }
+        if (isCreditTransaction(transaction)) {
+            return MerchantWalletLedgerEntryType.PAYMENT;
+        }
+        if (REFUND_TRANSACTION_TYPES.stream()
+                .anyMatch(type -> type.equalsIgnoreCase(transaction.getTransactionType()))) {
+            return MerchantWalletLedgerEntryType.REFUND;
+        }
+        return MerchantWalletLedgerEntryType.ADJUSTMENT;
+    }
+
+    private String resolveTransactionReferenceId(FinancialTransaction transaction) {
+        if (transaction.getId() != null) {
+            return transaction.getId().toString();
+        }
+        if (StringUtils.hasText(transaction.getRequestId())) {
+            return transaction.getRequestId();
+        }
+        return transaction.getTransactionId();
+    }
+
+    private String buildTransactionStatement(FinancialTransaction transaction) {
+        String type = transaction.getTransactionType();
+        String reference = transaction.getTransactionNumber();
+        if (!StringUtils.hasText(reference)) {
+            reference = transaction.getExternalInvoiceId();
+        }
+        if (StringUtils.hasText(type) && StringUtils.hasText(reference)) {
+            return type + " " + reference;
+        }
+        return StringUtils.hasText(type) ? type : reference;
+    }
+
+    private String resolveSettlementReferenceId(Settlement settlement) {
+        if (settlement.getId() != null) {
+            return settlement.getId().toString();
+        }
+        return settlement.getSettlementReference();
+    }
+
+    private String buildSettlementStatement(Settlement settlement, boolean includeReserveNote) {
+        String base;
+        if (StringUtils.hasText(settlement.getSettlementReference())) {
+            base = "Settlement " + settlement.getSettlementReference();
+        } else {
+            base = "Settlement";
+        }
+        if (includeReserveNote) {
+            return base + " (includes reserve adjustment)";
+        }
+        return base;
     }
 
     private MerchantWalletBalance newWallet(Long merchantId, String currency) {
